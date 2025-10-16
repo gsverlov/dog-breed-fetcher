@@ -19,17 +19,39 @@ public class DogApiBreedFetcher implements BreedFetcher {
 
     /**
      * Fetch the list of sub breeds for the given breed from the dog.ceo API.
+     *
      * @param breed the breed to fetch sub breeds for
      * @return list of sub breeds for the given breed
      * @throws BreedNotFoundException if the breed does not exist (or if the API call fails for any reason)
      */
     @Override
-    public List<String> getSubBreeds(String breed) {
-        // TODO Task 1: Complete this method based on its provided documentation
-        //      and the documentation for the dog.ceo API. You may find it helpful
-        //      to refer to the examples of using OkHttpClient from the last lab,
-        //      as well as the code for parsing JSON responses.
-        // return statement included so that the starter code can compile and run.
-        return new ArrayList<>();
+    public List<String> getSubBreeds(String breed) throws BreedFetcher.BreedNotFoundException {
+        String url = "https://dog.ceo/api/breed/" + breed.toLowerCase() + "/list";
+        Request request = new Request.Builder().url(url).build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful() || response.body() == null) {
+                throw new BreedFetcher.BreedNotFoundException(breed);
+            }
+
+            String responseBody = response.body().string();
+            JSONObject json = new JSONObject(responseBody);
+
+            if (!"success".equals(json.optString("status"))) {
+                throw new BreedFetcher.BreedNotFoundException(breed);
+            }
+
+            JSONArray subBreedsJson = json.getJSONArray("message");
+            List<String> subBreeds = new ArrayList<>();
+            for (int i = 0; i < subBreedsJson.length(); i++) {
+                subBreeds.add(subBreedsJson.getString(i));
+            }
+
+            return subBreeds;
+
+        } catch (IOException e) {
+            throw new BreedFetcher.BreedNotFoundException("Error calling Dog API for breed: " + breed, e);
+        }
     }
 }
+
